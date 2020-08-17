@@ -5,5 +5,11 @@
 {% endblock %}
 
 {% block main %}
-
+    {% if photos is none %}
+        <h1 class="text-center" style="padding-top: 150px;"><span class="align-middle">You bucket is empty</span></h1>
+        <h1 class="text-center"><span class="align-middle">Click on <strong>add</strong> to add photos to your bucket</span></h1>
+    {% else %}
+        {% for photo in photos %}
+        {% endfor%}
+    {% endif %}
 {% endblock %}

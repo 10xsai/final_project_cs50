@@ -3,8 +3,8 @@ import requests
 from flask import Flask, render_template, redirect, request, session
 import sqlite3
 from helpers import login_required
-#from flask_session importFA Session
 from tempfile import mkdtemp
+from werkzeug import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'my secret key'
@@ -12,12 +12,12 @@ app.secret_key = 'my secret key'
 app.config["SESSION_FILE_DIR"] = mkdtemp()
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-#Session(app)
-
+app.config["UPLOAD_FOLDER"] = "static/images"
 
 conn = sqlite3.connect("users.sqlite", check_same_thread=False)
 db = conn.cursor()
 #db.execute("CREATE TABLE user (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, password TEXT NOT NULL)")
+#db.execute("CREATE TABLE photos (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, photo BLOB NOT NULL)")
 
 @app.route('/')
 @login_required
@@ -25,10 +25,39 @@ def index():
     photos = None
     return render_template('index.html', photos=photos)
 
+ALLOWED_EXTENSIONS = {'jfif', 'jpg', 'jpeg', 'png', 'gif', 'tif', 'tiff'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+'''def convert_to_binary(filename):
+    with open(filename, 'rb') as file:
+        blob_data = file.read()
+    return blob_data
+'''
 @app.route('/add', methods=["POST", "GET"])
 @login_required
 def add():
-    return render_template('add.html')
+    if request.method=="GET":
+        return render_template('add.html')
+    f = request.files
+    if 'file' not in f:
+        return redirect(request.url)
+    f = f['file']
+    fname = f.filename
+
+    if fname == '':
+        return redirect(request.url)
+
+    if not allowed_file(fname):
+        return redirect(request.url)
+    
+    fname = secure_filename(fname)
+    f.save(os.path.join(app.config["UPLOAD_FOLDER"], fname))
+    user_id = session['user_id']
+    db.execute('INSERT INTO photos (user_id, photo) VALUES (?, ?)', (user_id, f.read()))
+    conn.commit()
+    return redirect('/')
 
 
 @app.route('/login', methods=["GET", "POST"])

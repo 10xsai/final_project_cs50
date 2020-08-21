@@ -1,7 +1,9 @@
 import os
+import sys
 import requests
 from flask import Flask, render_template, redirect, request, session
 import sqlite3
+import base64
 from helpers import login_required
 from tempfile import mkdtemp
 from werkzeug import secure_filename
@@ -14,6 +16,8 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["UPLOAD_FOLDER"] = "static/images"
 
+ALLOWED_EXTENSIONS = {'jfif', 'jpg', 'jpeg', 'png', 'gif', 'tif', 'tiff'}
+
 conn = sqlite3.connect("users.sqlite", check_same_thread=False)
 db = conn.cursor()
 #db.execute("CREATE TABLE user (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, password TEXT NOT NULL)")
@@ -22,19 +26,16 @@ db = conn.cursor()
 @app.route('/')
 @login_required
 def index():
-    photos = None
-    return render_template('index.html', photos=photos)
+    db.execute('SELECT photo from photos WHERE user_id=?', (session['user_id'], ))
+    image_paths = db.fetchall()
+    print(image_paths)
+    return render_template('index.html', photos=image_paths)
 
-ALLOWED_EXTENSIONS = {'jfif', 'jpg', 'jpeg', 'png', 'gif', 'tif', 'tiff'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-'''def convert_to_binary(filename):
-    with open(filename, 'rb') as file:
-        blob_data = file.read()
-    return blob_data
-'''
+
 @app.route('/add', methods=["POST", "GET"])
 @login_required
 def add():
@@ -51,11 +52,11 @@ def add():
 
     if not allowed_file(fname):
         return redirect(request.url)
-    
+            
     fname = secure_filename(fname)
-    f.save(os.path.join(app.config["UPLOAD_FOLDER"], fname))
-    user_id = session['user_id']
-    db.execute('INSERT INTO photos (user_id, photo) VALUES (?, ?)', (user_id, f.read()))
+    fpath = f"static/images/{session['user_id']}/{fname}"
+    f.save(fpath)
+    db.execute("INSERT INTO photos (user_id, photo) VALUES (?, ?)", (session['user_id'], fpath))
     conn.commit()
     return redirect('/')
 
@@ -95,7 +96,8 @@ def signup():
     db.execute("INSERT INTO user (username, password) VALUES (?, ?)", (username, password))
     conn.commit()
     user = db.execute('SELECT * FROM user where username= ?', (username, )).fetchone()
-    session["user_id"]=user[1]
+    session["user_id"]=user[0]
+    os.mkdir("static/images/"+str(user[0]))
     return redirect("/")
 
 @app.route("/logout")

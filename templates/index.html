@@ -1,15 +1,19 @@
-{% extends 'layout.html' %}
+{% extends 'layout.html' %} 
 
-{% block title %}
-    home
-{% endblock %}
+{% block title %} home {% endblock %}
 
-{% block main %}
-    {% if photos is none %}
-        <h1 class="text-center" style="padding-top: 150px;"><span class="align-middle">You bucket is empty</span></h1>
-        <h1 class="text-center"><span class="align-middle">Click on <strong>add</strong> to add photos to your bucket</span></h1>
-    {% else %}
-        {% for photo in photos %}
-        {% endfor%}
-    {% endif %}
+{% block main%}
+  {% if photos is none %}
+    <h1 class="text-center" style="padding-top: 150px;">
+    <span class="align-middle">You bucket is empty</span>
+    </h1>
+    <h1 class="text-center">
+    <span class="align-middle">Click on <strong>add</strong> to add photos to your bucket</span>
+    </h1>
+  {% else %} 
+    {% for photo in photos %}
+      <img src="{{ photo[0] }}" alt="image" width="500px" style="display: block; margin: 10px auto; "> 
+    {% endfor%} 
+  {% endif %} 
+  
 {% endblock %}
